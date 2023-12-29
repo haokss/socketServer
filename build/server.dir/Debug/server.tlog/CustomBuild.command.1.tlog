@@ -1,0 +1,10 @@
+^D:\桌面\MEOWTIGER\WEBSOKET\CMAKELISTS.TXT
+setlocal
+D:\cmake\bin\cmake.exe -SD:/桌面/MeowTiger/websoket -BD:/桌面/MeowTiger/websoket/build --check-stamp-file D:/桌面/MeowTiger/websoket/build/CMakeFiles/generate.stamp
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd

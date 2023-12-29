@@ -1,0 +1,10 @@
+^D:\桌面\MEOWTIGER\WEBSOKET\BUILD\CMAKEFILES\B45E750BEEBBA3D716A2A939207E6264\GENERATE.STAMP.RULE
+setlocal
+D:\cmake\bin\cmake.exe -SD:/桌面/MeowTiger/websoket -BD:/桌面/MeowTiger/websoket/build --check-stamp-list CMakeFiles/generate.stamp.list --vs-solution-file D:/桌面/MeowTiger/websoket/build/server.sln
+if %errorlevel% neq 0 goto :cmEnd
+:cmEnd
+endlocal & call :cmErrorLevel %errorlevel% & goto :cmDone
+:cmErrorLevel
+exit /b %1
+:cmDone
+if %errorlevel% neq 0 goto :VCEnd
