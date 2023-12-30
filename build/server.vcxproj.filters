@@ -15,7 +15,7 @@
     <ClInclude Include="D:\桌面\MeowTiger\websoket\MeowMessage.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="D:\桌面\MeowTiger\websoket\sqlserver.h">
+    <ClInclude Include="D:\桌面\MeowTiger\websoket\sqlserver.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

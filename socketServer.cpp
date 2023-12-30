@@ -6,7 +6,7 @@
 #include<ctime>
 #include<stdlib.h>
 #include"MeowMessage.hpp"
-#include"sqlserver.h"
+#include"sqlserver.hpp"
 
 #pragma comment(lib,"ws2_32.lib")
 
@@ -25,11 +25,6 @@ void Meow_now_time(){
 struct socketNode{
     int port;
     SOCKET clientSock;
-
-    // bool operator<(const socketNode& sn) const{
-    //     if(this->port > sn.port) return false;
-    //     else return true;
-    // }
 };
 
 /// 初始化全局变量
@@ -65,9 +60,20 @@ void HandleClient(SOCKET clientSocket, sockaddr_in clientAddr) {
 
         if (retVal == 0) {
             // 将客户端从在线列表中移除
-
+            socketNode delSocket;
+            delSocket.port = clientAddr.sin_port;
+            delSocket.clientSock = clientSocket;
+            for(auto it = MeowOnlineMap.begin();it!=MeowOnlineMap.end();){
+                if(it->second.port == delSocket.port){
+                    std::cout<<it->first<<"client disconnected!"<<std::endl;
+                    it = MeowOnlineMap.erase(it);
+                }else{
+                    ++it;
+                }
+            }
+            // 清除socket连接
+            // std::remove(MeowSocket.begin(),MeowSocket.end(),clientSocket);
             // 客户端断开连接
-            cout << "Client disconnected" << endl;
             closesocket(clientSocket);
             return;
         }
@@ -96,19 +102,10 @@ void HandleClient(SOCKET clientSocket, sockaddr_in clientAddr) {
             SQLCHAR password[50];
             SQLLEN len_id = sizeof(id);
             SQLLEN len_password = sizeof(password);
-            // 分配语句句柄
-            SQLAllocHandle(SQL_HANDLE_STMT, sql.hdbc, &sql.hstmt);
-            // 准备查询
-            SQLPrepare(sql.hstmt, query, SQL_NTS);
-            // 绑定参数
-            SQLBindParameter(sql.hstmt, 1, SQL_PARAM_INPUT, SQL_C_LONG, SQL_INTEGER, 0, 0, &id, 0, &len_id);
-            // 执行查询
-            SQLExecute(sql.hstmt);
-
+            sql.execute_query(query,SQLINTEGER(id));
             // 绑定结果集
             SQLBindCol(sql.hstmt, 1, SQL_C_LONG, &id, 0, &len_id);
             SQLBindCol(sql.hstmt, 2, SQL_C_CHAR, password, sizeof(password), &len_password);
-
             // 获取查询结果
             SQLFetch(sql.hstmt);
 
@@ -136,14 +133,7 @@ void HandleClient(SOCKET clientSocket, sockaddr_in clientAddr) {
                     }
                     // 从数据库加载加载用户数据并回传
                     SQLCHAR queryUser[] = "SELECT user_info.id,user_info.name,user_info.label FROM user_info WHERE id = ?";
-                    // 分配语句句柄
-                    sql.ret = SQLAllocHandle(SQL_HANDLE_STMT, sql.hdbc, &sql.hstmt);
-                    // // 准备查询
-                    SQLPrepare(sql.hstmt, queryUser, SQL_NTS);
-                    // // 绑定参数
-                    SQLBindParameter(sql.hstmt, 1, SQL_PARAM_INPUT, SQL_C_LONG, SQL_INTEGER, 0, 0, &id, 0, &len_id);
-                    // 执行查询
-                    sql.ret = SQLExecDirect(sql.hstmt,(SQLTCHAR *)queryUser, SQL_NTS);
+                    sql.execute_query(queryUser,(SQLINTEGER)id);
                     // 解析查询结果
                     std::string msg = "0#0#0#0#";
                     if (SQL_SUCCEEDED(sql.ret)|| sql.ret == SQL_SUCCESS_WITH_INFO){
@@ -163,14 +153,7 @@ void HandleClient(SOCKET clientSocket, sockaddr_in clientAddr) {
                         sql.show_error(sql.hstmt, SQL_HANDLE_STMT);
                     }
                     SQLCHAR queryUser1[] = "SELECT user_info.id,user_info.name,user_info.label FROM user_info WHERE id in(SELECT friend_id FROM user_info,user_friend WHERE user_info.id = user_friend.id AND user_info.id = ?);";
-                    // 分配语句句柄
-                    sql.ret = SQLAllocHandle(SQL_HANDLE_STMT, sql.hdbc, &sql.hstmt);
-                    // // 准备查询
-                    SQLPrepare(sql.hstmt, queryUser, SQL_NTS);
-                    // // 绑定参数
-                    SQLBindParameter(sql.hstmt, 1, SQL_PARAM_INPUT, SQL_C_LONG, SQL_INTEGER, 0, 0, &id, 0, &len_id);
-                    // 执行查询
-                    sql.ret = SQLExecDirect(sql.hstmt,(SQLTCHAR *)queryUser1, SQL_NTS);
+                    sql.execute_query(queryUser1,(SQLINTEGER)id);
                     // 解析查询结果
                     if (SQL_SUCCEEDED(sql.ret)|| sql.ret == SQL_SUCCESS_WITH_INFO){
                         SQLCHAR str1[30],str2[10],str3[20];
@@ -274,28 +257,22 @@ void HandleClient(SOCKET clientSocket, sockaddr_in clientAddr) {
         {
             // 将好友请求消息转发给接收方
             auto it = MeowOnlineMap.find(mmsg.receive_id);
-            // 判断好友是否在线
-            if(it!=MeowOnlineMap.end()){
-                SOCKET receiveSocket = it->second.clientSock;
-                const char * message = buffer;
-                retVal = send(receiveSocket, message, strlen(message), 0);
-                if (retVal == SOCKET_ERROR) {
-                    cerr << "Send error" << endl;
-                    closesocket(clientSocket);
-                    return;
-                }
-            }else{
-                // 存入暂时发送消息队列，等待用户上线 
+            // 判断消息是发送请求还是接受请求
+            if(strcmp(mmsg.content,"request")==0){
+                // 存入暂时发送消息队列，等待用户再次上线 
                 MeowAddFriend.push_back(mmsg);
                 std::cout<<"receive is not online! Add to vector "<<std::endl;
-            }
+            }else if(strcmp(mmsg.content,"accept")==0){
+                // 双方成为好友,更新数据库信息
+
+                // 返回成功消息
+            }          
         }break;
         default:
             break;
         }
     }
 }
-
 
 int main()
 {
@@ -362,27 +339,6 @@ int main()
         // 创建一个新线程来处理客户端连接
         thread(HandleClient, ClientSocket, clientAddr).detach();
     }
-    // // 处理数据
-    // char ReceiveBuff[BUFSIZ];
-    // char SendBuff[BUFSIZ];
-    // while (true)
-    // {
-    //     ZeroMemory(ReceiveBuff, BUFSIZ);
-    //     RetVal = recv(ClientSocket, ReceiveBuff, BUFSIZ, 0);
-    //     if (RetVal == SOCKET_ERROR)
-    //     {
-    //         cout << "receive error" << endl;
-    //         closesocket(ServerSocket);
-    //         closesocket(ClientSocket);
-    //         WSACleanup();
-    //         return  -1;
-    //     }
-    //     cout<<"receive:" << ReceiveBuff << endl;
-    //     cout<<"send"<<endl;
-    //     cin >> SendBuff;
-    //     send(ClientSocket, SendBuff, strlen(SendBuff), 0);
-    // }
-
     // 关闭套接字和清理Winsock
     closesocket(ServerSocket);
     WSACleanup();

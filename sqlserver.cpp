@@ -1,4 +1,4 @@
-#include "sqlserver.h"
+#include "sqlserver.hpp"
 
 SQLserver::SQLserver()
 {
@@ -31,43 +31,6 @@ void SQLserver::connect()
     }
 }
 
-// 等待封装的查询接口
-// 通用的查询接口
-void SQLserver::execute_query(SQLTCHAR *query)
-{
-    // 判断用户登录数据是否在数据库中,靠端口区分用户
-    SQLINTEGER id;
-    SQLCHAR password[50];
-    SQLLEN len_id = sizeof(id);
-    SQLLEN len_password = sizeof(password);
-    // 分配语句句柄
-    SQLAllocHandle(SQL_HANDLE_STMT, hdbc, &hstmt);
-    // 准备查询
-    SQLPrepare(hstmt, query, SQL_NTS);
-    // 绑定参数
-    SQLBindParameter(hstmt, 1, SQL_PARAM_INPUT, SQL_C_LONG, SQL_INTEGER, 0, 0, &id, 0, &len_id);
-    // 执行查询
-    SQLExecute(hstmt);
-
-    // 绑定结果集
-    SQLBindCol(hstmt, 1, SQL_C_LONG, &id, 0, &len_id);
-    SQLBindCol(hstmt, 2, SQL_C_CHAR, password, sizeof(password), &len_password);
-
-    // 获取查询结果
-    SQLFetch(hstmt);
-    // 执行查询
-    ret = SQLExecDirect(hstmt, (SQLTCHAR *)query, SQL_NTS);
-    if (SQL_SUCCEEDED(ret)|| ret == SQL_SUCCESS_WITH_INFO){
-        // 查询成功
-    }
-    else
-    {
-        std::cerr << "Error executing query." << std::endl;
-        show_error(hstmt, SQL_HANDLE_STMT);
-    }
-    SQLFreeStmt(hstmt, SQL_CLOSE); // Free statement handle resources
-}
-
 // 处理数据库错误
 void SQLserver::show_error(SQLHANDLE handle, SQLSMALLINT type)
 {
@@ -86,3 +49,13 @@ void SQLserver::show_error(SQLHANDLE handle, SQLSMALLINT type)
             std::cerr << "SQL Error: " << state << "(" << native << "): " << text << std::endl;
     } while (ret == SQL_SUCCESS);
 }
+
+// 标准查询
+// // 分配语句句柄
+// sql.ret = SQLAllocHandle(SQL_HANDLE_STMT, sql.hdbc, &sql.hstmt);
+// // // 准备查询
+// SQLPrepare(sql.hstmt, queryUser, SQL_NTS);
+// // // 绑定参数
+// SQLBindParameter(sql.hstmt, 1, SQL_PARAM_INPUT, SQL_C_LONG, SQL_INTEGER, 0, 0, &id, 0, &len_id);
+// // 执行查询
+// sql.ret = SQLExecDirect(sql.hstmt,(SQLTCHAR *)queryUser1, SQL_NTS);

@@ -308,7 +308,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="D:\桌面\MeowTiger\websoket\socketServer.cpp" />
     <ClInclude Include="D:\桌面\MeowTiger\websoket\MeowMessage.hpp" />
     <ClCompile Include="D:\桌面\MeowTiger\websoket\MeowMessage.cpp" />
-    <ClInclude Include="D:\桌面\MeowTiger\websoket\sqlserver.h" />
+    <ClInclude Include="D:\桌面\MeowTiger\websoket\sqlserver.hpp" />
     <ClCompile Include="D:\桌面\MeowTiger\websoket\sqlserver.cpp" />
   </ItemGroup>
   <ItemGroup>
