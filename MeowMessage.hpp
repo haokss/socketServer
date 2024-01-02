@@ -25,7 +25,7 @@ public:
     ~MeowMessage();
     // 序列化字节流
     // 请注意使用此函数一定要清除开辟的内存，防止内存泄漏
-    char* Serialize()const;
+    std::string Serialize()const;
     // 反序列化
     void DeSerialize(char *Buffer);
 public:
@@ -33,7 +33,7 @@ public:
     MeowDataType type;
     int send_id;
     int receive_id;
-    char *content;
+    std::string content;
 };
 
 

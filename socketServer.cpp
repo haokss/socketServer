@@ -4,6 +4,7 @@
 #include<thread>
 #include<map>
 #include<ctime>
+#include<sstream>
 #include<stdlib.h>
 #include"MeowMessage.hpp"
 #include"sqlserver.hpp"
@@ -91,11 +92,17 @@ void HandleClient(SOCKET clientSocket, sockaddr_in clientAddr) {
         case MeowDataType::LOGIN:
         {
             // 获取用户登录信息
-            char *loginInfo = mmsg.content;
-            char *token = strtok(loginInfo,"$");
-            int _id = std::stoi(token);
-            token= strtok(NULL,"$");
-            char *_pwd = token;
+            istringstream iss(mmsg.content);
+            std::string str;
+            std::getline(iss,str,'$');
+            int _id = std::stoi(str);
+            std::getline(iss,str,'$');
+            const char *_pwd = str.c_str();
+            // char *loginInfo = mmsg.content.c_str();
+            // char *token = strtok(loginInfo,"$");
+            // int _id = std::stoi(token);
+            // token= strtok(NULL,"$");
+            // char *_pwd = token;
             // 判断用户登录数据是否在数据库中,靠端口区分用户
             SQLCHAR query[] = "SELECT id, password FROM user_id WHERE id = ?";
             SQLINTEGER id = _id;
@@ -145,13 +152,14 @@ void HandleClient(SOCKET clientSocket, sockaddr_in clientAddr) {
                             SQLGetData(sql.hstmt, 2, SQL_C_CHAR, str2, 50, &len_str2);   //获取第二列数据
                             SQLGetData(sql.hstmt, 3, SQL_C_CHAR, str3, 50, &len_str3);   //获取第三列数据
                             msg = msg+reinterpret_cast<const char*>(str1)+"$"+reinterpret_cast<const char*>(str2)+"$" +reinterpret_cast<const char*>(str3)+"|";
-                        }
-
+                        }                       
                     }
                     else{
                         cerr << "Error executing query." << endl;
                         sql.show_error(sql.hstmt, SQL_HANDLE_STMT);
                     }
+                    // SQLFreeStmt(sql.hstmt, SQL_CLOSE);
+
                     SQLCHAR queryUser1[] = "SELECT user_info.id,user_info.name,user_info.label FROM user_info WHERE id in(SELECT friend_id FROM user_info,user_friend WHERE user_info.id = user_friend.id AND user_info.id = ?);";
                     sql.execute_query(queryUser1,(SQLINTEGER)id);
                     // 解析查询结果
@@ -165,7 +173,6 @@ void HandleClient(SOCKET clientSocket, sockaddr_in clientAddr) {
                             SQLGetData(sql.hstmt, 3, SQL_C_CHAR, str3, 50, &len_str3);   //获取第三列数据
                             msg = msg+reinterpret_cast<const char*>(str1)+"$"+reinterpret_cast<const char*>(str2)+"$" +reinterpret_cast<const char*>(str3)+"|";
                         }
-
                     }
                     else{
                         cerr << "Error executing query." << endl;
@@ -186,7 +193,8 @@ void HandleClient(SOCKET clientSocket, sockaddr_in clientAddr) {
                     for(const auto it:MeowAddFriend){
                         if(it.receive_id ==mmsg.send_id){
                             // 找到对应id，发送好友请求
-                            char * send1 = it.Serialize();
+                            std::string sendStr = it.Serialize();
+                            const char *send1 = sendStr.c_str();
                             Sleep(100);
                             retVal = send(clientSocket, send1, strlen(send1), 0);
                             if (retVal == SOCKET_ERROR) {
@@ -194,7 +202,6 @@ void HandleClient(SOCKET clientSocket, sockaddr_in clientAddr) {
                                 closesocket(clientSocket);
                                 return;
                             }
-                            delete []send1;
                         }
                     }                     
                     // 消息发送结束标志
@@ -223,8 +230,8 @@ void HandleClient(SOCKET clientSocket, sockaddr_in clientAddr) {
         }break;
         case MeowDataType::MESSAGE:
         {
-            char *message = nullptr;
-            message = mmsg.Serialize();
+            std::string messageStr = mmsg.Serialize();
+            const char* message = messageStr.c_str();
             // 先回传相同的数据
             retVal = send(clientSocket, message, strlen(message), 0);
             std::cout<<"[send message]:"<<message<<std::endl;
@@ -248,24 +255,26 @@ void HandleClient(SOCKET clientSocket, sockaddr_in clientAddr) {
             }else{
                 // 什么都不做
                 std::cout<<"receive is not online! "<<std::endl;
-                // 存入暂时发送消息队列，等待用户上线
-                
+                // 消息记录存入数据库
+                std::string add = "INSERT INTO friend_message VALUES('','"+std::to_string(mmsg.send_id)+ "','"+std::to_string(mmsg.receive_id)+"','"+mmsg.content+"',GETDATE())";
+                sql.execute_add((SQLCHAR *)add.c_str());                        
             }
-            delete []message;
         }break;
         case MeowDataType::ADD:
         {
             // 将好友请求消息转发给接收方
             auto it = MeowOnlineMap.find(mmsg.receive_id);
             // 判断消息是发送请求还是接受请求
-            if(strcmp(mmsg.content,"request")==0){
+            if(strcmp(mmsg.content.c_str(),"request")==0){
                 // 存入暂时发送消息队列，等待用户再次上线 
                 MeowAddFriend.push_back(mmsg);
                 std::cout<<"receive is not online! Add to vector "<<std::endl;
-            }else if(strcmp(mmsg.content,"accept")==0){
+            }else if(strcmp(mmsg.content.c_str(),"accept")==0){
                 // 双方成为好友,更新数据库信息
-
-                // 返回成功消息
+                std::string add = "INSERT INTO user_friend VALUES('"+std::to_string(mmsg.send_id)+"','"+std::to_string(mmsg.receive_id)+"')";
+                std::cout<<add<<std::endl;
+                sql.execute_add((SQLTCHAR*)add.c_str());
+                
             }          
         }break;
         default:

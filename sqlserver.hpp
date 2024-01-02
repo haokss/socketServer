@@ -23,6 +23,7 @@ public:
     SQLserver();
     ~SQLserver();
     template<typename T> void execute_query(SQLTCHAR *query, T param);
+    void execute_add(SQLTCHAR *add);
     void show_error(SQLHANDLE handle, SQLSMALLINT type);
 private:
     void connect();
@@ -41,8 +42,6 @@ void SQLserver::execute_query(SQLTCHAR *query, T param)
     SQLBindParameter(hstmt, 1, SQL_PARAM_INPUT, SQL_C_LONG, SQL_INTEGER, 0, 0, &param, 0, &paramLen);
     // 直接执行查询
     ret = SQLExecDirect(hstmt,(SQLTCHAR *)query, SQL_NTS);
-
 }
-
 
 #endif // SQLSERVER_H

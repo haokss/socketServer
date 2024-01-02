@@ -59,3 +59,19 @@ void SQLserver::show_error(SQLHANDLE handle, SQLSMALLINT type)
 // SQLBindParameter(sql.hstmt, 1, SQL_PARAM_INPUT, SQL_C_LONG, SQL_INTEGER, 0, 0, &id, 0, &len_id);
 // // 执行查询
 // sql.ret = SQLExecDirect(sql.hstmt,(SQLTCHAR *)queryUser1, SQL_NTS);
+
+void SQLserver::execute_add(SQLTCHAR *add){
+    // 申请句柄
+    ret = SQLAllocHandle(SQL_HANDLE_STMT,hdbc,&hstmt);
+    // 执行查询
+    ret = SQLExecDirect(hstmt, (SQLTCHAR *)add, SQL_NTS);
+    if (SQL_SUCCEEDED(ret)|| ret == SQL_SUCCESS_WITH_INFO){
+        std::cout << "Add executed successfully!" << std::endl;
+    }
+    else
+    {
+        std::cerr << "Error executing query." << std::endl;
+        show_error(hstmt, SQL_HANDLE_STMT);
+    }
+    SQLFreeStmt(hstmt, SQL_CLOSE);
+}
