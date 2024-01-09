@@ -7,7 +7,7 @@
 #include<vector>
 #include<string>
 enum class MeowDataType{
-    LOGIN = 1, REG = 2,MESSAGE = 3, ADD = 4, DEL = 5
+    LOGIN = 1, REG = 2,MESSAGE = 3, ADD = 4, DEL = 5, UPDATE = 6
 };
 // 定义数据的发送类型 必须严格按照格式
 //1、 Time: xxx\n
@@ -35,6 +35,7 @@ public:
     int receive_id;
     std::string content;
 };
+
 
 
 #endif
